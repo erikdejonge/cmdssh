@@ -129,12 +129,12 @@ def call_command(command, cmdfolder, verbose=False, streamoutput=True, returnout
         if streamoutput is True:
             while proc.poll() is None:
                 output = proc.stdout.readline()
-
+                output = output.decode("utf-8")
                 if returnoutput is True:
                     retval += str(output)
 
                 if len(output.strip()) > 0:
-                    console(output, color="yellow"),
+                    console(output, color="green"),
         else:
             so, se = proc.communicate()
             if proc.returncode != 0 or verbose:
