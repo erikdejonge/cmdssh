@@ -8,12 +8,17 @@ license: GNU-GPL2
 """
 
 import os
-import sys
-import paramiko
 import subprocess
 import getpass
-from os.path import join, expanduser
-from consoleprinter import console_exception, console
+import stat
+import hashlib
+from os.path import join
+
+import paramiko
+from paramiko import SSHClient
+
+from consoleprinter import console_exception, console, console_warning
+from .scp import SCPClient
 
 
 def remote_cmd(server, cmd, username=None):
@@ -35,8 +40,8 @@ def remote_cmd(server, cmd, username=None):
     se = se.read()
 
     if len(se) > 0:
-        so = "\033[31m " + str(se) + "\033[0m"
-
+        console_warning(se)
+    so = so.decode("utf-8")
     return so
 
 
@@ -50,6 +55,31 @@ def remote_cmd_map(servercmd):
     return server, res
 
 
+def run_scp(server, username, cmdtype, fp1, fp2):
+    """
+    @type server: str, unicode
+    @type username: CryptoUser
+    @type cmdtype: str, unicode
+    @type fp1: str, unicode
+    @type fp2: str, unicode
+    @return: None
+    """
+    run_cmd("ssh -t " + username + "@" + server + " date")
+    ssh = SSHClient()
+    ssh.load_system_host_keys()
+    ssh.connect(server)
+
+    # SCPCLient takes a paramiko transport as its only argument
+    scpc = SCPClient(ssh.get_transport())
+
+    if cmdtype == "put":
+        scpc.put(fp1, fp2)
+    else:
+        scpc.get(fp1, fp2)
+
+    return True
+
+
 def put_scp(server, fp1, fp2, username=None):
     """
     @type server: str, unicode
@@ -58,7 +88,7 @@ def put_scp(server, fp1, fp2, username=None):
     @type username: CryptoUser, None
     @return: None
     """
-    return scp(server, "put", fp1, fp2, username)
+    return run_scp(server, username, "put", fp1, fp2)
 
 
 def get_scp(server, fp1, fp2, username=None):
@@ -69,129 +99,84 @@ def get_scp(server, fp1, fp2, username=None):
     @type username: CryptoUser, None
     @return: None
     """
-    return scp(server, "get", fp1, fp2, username)
+    return run_scp(server, username, "get", fp1, fp2)
 
 
-def scp(server, username, cmdtype, fp1, fp2, rsa_private_key=None):
+def call_command(command, cmdfolder, verbose=False, streamoutput=True, returnoutput=False):
     """
-    @type server: str, unicode
-    @type username: CryptoUser
-    @type cmdtype: str, unicode
-    @type fp1: str, unicode
-    @type fp2: str, unicode
-    @type rsa_private_key: str, unicode, None
+    @type command: str, unicode
+    @type cmdfolder: str, unicode
+    @type verbose: bool
+    @type streamoutput: bool
+    @type returnoutput: bool
     @return: None
     """
-
-    # put back known_hosts file
-    run_cmd("ssh -t " + username + "@" + server + " date")
-    transport = None
     try:
-        hostname = server
-        port = 22
-        password = ''
+        if verbose:
+            console(cmdfolder, command, color="yellow")
 
-        #rsa_private_key = join(os.getcwdu(), "keys/secure/vagrantsecure")
-        if rsa_private_key is None:
-            rsa_private_key = join(expanduser("~"), ".ssh/id_rsa")
+        commandfile = hashlib.md5(str(command).encode("utf-8")).hexdigest() + ".sh"
+        commandfilepath = join(cmdfolder, commandfile)
+        open(commandfilepath, "w").write(command)
 
-        if rsa_private_key is None:
-            raise AssertionError("rsa_private_key: is None")
+        if not os.path.exists(commandfilepath):
+            raise ValueError("commandfile could not be made")
 
-        if not os.path.exists(rsa_private_key):
-            raise AssertionError("rsa_private_key: does not exist")
+        os.chmod(commandfilepath, stat.S_IREAD | stat.S_IWRITE | stat.S_IEXEC)
+        proc = subprocess.Popen(commandfilepath, stderr=subprocess.PIPE, stdout=subprocess.PIPE, cwd=cmdfolder, shell=True)
+        retval = ""
 
-        transport = paramiko.Transport((hostname, port))
-        transport.start_client()
-        ki = paramiko.RSAKey.from_private_key_file(rsa_private_key)
-        agent = paramiko.Agent()
-        agent_keys = agent.get_keys() + (ki,)
+        if streamoutput is True:
+            while proc.poll() is None:
+                output = proc.stdout.readline()
 
-        if len(agent_keys) == 0:
-            raise AssertionError("scp: no keys", server)
+                if returnoutput is True:
+                    retval += str(output)
 
-        authenticated = False
+                if len(output.strip()) > 0:
+                    console(output, color="yellow"),
+        else:
+            so, se = proc.communicate()
+            if proc.returncode != 0 or verbose:
+                print("command:")
+                print(so)
+                print(se)
 
-        for key in agent_keys:
-            try:
-                transport.auth_publickey(username, key)
-                authenticated = True
-                break
-            except paramiko.SSHException:
-                pass
+            if returnoutput is True:
+                retval = so
+                retval += se
+                retval = retval.decode("utf-8")
+            fout = open(join(cmdfolder, "reposmon.out"), "w")
+            fout.write(str(so))
+            fout.write(str(se))
+            fout.close()
 
-        if not authenticated:
-            raise AssertionError("scp: not authenticated", server)
+        if os.path.exists(commandfilepath):
+            os.remove(commandfilepath)
 
-        try:
-            host_keys = paramiko.util.load_host_keys(expanduser('~/.ssh/known_hosts'))
-        except IOError:
-            try:
-                host_keys = paramiko.util.load_host_keys(expanduser('~/ssh/known_hosts'))
-            except IOError:
-                print('*** ')
-                print("\033[31msftp: unable to open host keys file\033[0m")
-                host_keys = {}
+        if returnoutput is True:
 
-        if hostname in host_keys:
-            hostkeytype = list(host_keys[hostname].keys())[0]
-            hostkey = host_keys[hostname][hostkeytype]
-
-            if not transport.is_authenticated():
-                transport.connect(username=username, password=password, hostkey=hostkey)
-            else:
-                transport.open_session()
-
-            sftp = paramiko.SFTPClient.from_transport(transport)
-
-            if cmdtype == "put":
-                sftp.put(fp1, fp2)
-            else:
-                sftp.get(fp1, fp2)
-
-            return True
-    finally:
-        if transport is not None:
-            transport.close()
+            return retval.strip()
+        else:
+            return proc.returncode
+    except OSError as e:
+        console_exception(e)
+    except ValueError as e:
+        console_exception(e)
+    except subprocess.CalledProcessError as e:
+        console_exception(e)
 
 
-def run_cmd(cmd, pr=False, shell=False, streamoutput=True, returnoutput=False):
+def run_cmd(cmd, pr=False, streamoutput=True, returnoutput=True):
     """
     @type cmd: str, unicode
     @type pr: bool
-    @type shell: bool
     @type streamoutput: bool
     @type returnoutput: bool
     @return: None
     """
     if pr:
         console("run_cmd:", cmd, color="blue")
-    console("run_cmd:", cmd, color="blue")
 
-    if shell is True:
-        return subprocess.call(cmd, shell=True)
-    else:
-        cmdl = [x for x in cmd.split(" ") if len(x.strip()) > 0]
-        p = subprocess.Popen(cmdl, cwd=os.getcwd(), stderr=subprocess.PIPE, stdout=subprocess.PIPE)
-
-        if streamoutput and not returnoutput:
-            while p.poll() is None:
-                output = p.stdout.readline()
-
-                if len(output.strip()) > 0:
-                    sys.stdout.write("\033[30m" + output.decode("utf-8") + "\033[0m")
-                    sys.stdout.flush()
-
-        out, err = p.communicate()
-        if p.returncode != 0:
-            console(out, color="red")
-            console(err, color="red")
-        else:
-            if not returnoutput:
-                if len(out) > 0:
-                    console(out, color="grey")
-
-    if not returnoutput:
-        return p.returncode
-    else:
-        return out, err
+    rv = call_command(cmd, os.getcwd(), pr, streamoutput, returnoutput)
+    return str(rv)

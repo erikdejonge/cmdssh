@@ -15,7 +15,7 @@ from future import standard_library
 standard_library.install_aliases()
 from unittester import *
 from k8svp import *
-
+from cmdssh import *
 import time
 
 
@@ -28,34 +28,45 @@ class CmdsshTestCase(unittest.TestCase):
         """
         test_assert_raises
         """
-        out = remote_cmd("localhost", "mkdir ~/Desktop/foobar")
-        print(out)
-        out = remote_cmd("localhost", "ls ~/Desktop/foobar")
-        print (out)
+        remote_cmd("localhost", "rm -Rf ~/Desktop/foobar")
+        remote_cmd("localhost", "mkdir ~/Desktop/foobar")
+        out = remote_cmd("localhost", "ls ~/Desktop")
+
+        x = "foobar" in out
+        self.assertTrue(x)
+        remote_cmd("localhost", "rmdir ~/Desktop/foobar")
+        out = remote_cmd("localhost", "ls ~/Desktop")
+        x = "foobar.md" in out
+        self.assertFalse(x)
+
+
 
     def test_run_cmd(self):
         """
         test_run_cmd
         """
-        date = run_cmd("date", pr=False, shell=False, streamoutput=True, returnoutput=True)
-        self.assertEqual(date, time.time())
+        localt = time.strftime("%Y-%m-%d %H:%M", time.localtime())
+        date = run_cmd('date "+%Y-%m-%d% %H:%M"', pr=False, streamoutput=False, returnoutput=True)
+
+        self.assertEqual(date, localt)
 
     def test_scp(self):
         """
         test_scp
         """
-        scp("localhost", "put", "./README.md", "./Desktop")
+        run_scp("localhost", "rabshakeh", "put", "./README.md", "./Desktop")
         out = remote_cmd("localhost", "ls ~/Desktop")
-        print(out)
+
+        x = "README.md" in out
+        self.assertTrue(x)
+
 
 
 def main():
     """
     main
     """
-
-    scp("localhost", "rabshakeh", "put", "./README.md", "./Desktop")
-    #unit_test_main(globals())
+    unit_test_main(globals())
 
 
 if __name__ == "__main__":
