@@ -16,7 +16,6 @@ from os.path import join
 
 import paramiko
 from paramiko import SSHClient
-
 from consoleprinter import console_exception, console, console_warning
 from .scp import SCPClient
 
@@ -41,6 +40,7 @@ def remote_cmd(server, cmd, username=None):
 
     if len(se) > 0:
         console_warning(se)
+
     so = so.decode("utf-8")
     return so
 
@@ -115,7 +115,7 @@ def call_command(command, cmdfolder, verbose=False, streamoutput=True, returnout
         if verbose:
             console(cmdfolder, command, color="yellow")
 
-        commandfile = hashlib.md5(str(command).encode("utf-8")).hexdigest() + ".sh"
+        commandfile = hashlib.md5(str(command).encode()).hexdigest() + ".sh"
         commandfilepath = join(cmdfolder, commandfile)
         open(commandfilepath, "w").write(command)
 
@@ -145,17 +145,12 @@ def call_command(command, cmdfolder, verbose=False, streamoutput=True, returnout
             if returnoutput is True:
                 retval = so
                 retval += se
-                retval = retval.decode("utf-8")
-            fout = open(join(cmdfolder, "reposmon.out"), "w")
-            fout.write(str(so))
-            fout.write(str(se))
-            fout.close()
+                retval = retval.decode()
 
         if os.path.exists(commandfilepath):
             os.remove(commandfilepath)
 
         if returnoutput is True:
-
             return retval.strip()
         else:
             return proc.returncode
