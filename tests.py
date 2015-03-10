@@ -14,8 +14,8 @@ from __future__ import absolute_import
 from future import standard_library
 standard_library.install_aliases()
 from unittester import *
-from k8svp import *
 from cmdssh import *
+
 import time
 
 
@@ -31,15 +31,13 @@ class CmdsshTestCase(unittest.TestCase):
         remote_cmd("localhost", "rm -Rf ~/Desktop/foobar")
         remote_cmd("localhost", "mkdir ~/Desktop/foobar")
         out = remote_cmd("localhost", "ls ~/Desktop")
-
         x = "foobar" in out
         self.assertTrue(x)
+
         remote_cmd("localhost", "rmdir ~/Desktop/foobar")
         out = remote_cmd("localhost", "ls ~/Desktop")
         x = "foobar.md" in out
         self.assertFalse(x)
-
-
 
     def test_run_cmd(self):
         """
@@ -47,7 +45,6 @@ class CmdsshTestCase(unittest.TestCase):
         """
         localt = time.strftime("%Y-%m-%d %H:%M", time.localtime())
         date = run_cmd('date "+%Y-%m-%d% %H:%M"', pr=False, streamoutput=False, returnoutput=True)
-
         self.assertEqual(date, localt)
 
     def test_scp(self):
@@ -56,10 +53,8 @@ class CmdsshTestCase(unittest.TestCase):
         """
         run_scp("localhost", "rabshakeh", "put", "./README.md", "./Desktop")
         out = remote_cmd("localhost", "ls ~/Desktop")
-
         x = "README.md" in out
         self.assertTrue(x)
-
 
 
 def main():
