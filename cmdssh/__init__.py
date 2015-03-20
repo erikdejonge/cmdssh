@@ -113,8 +113,10 @@ def call_command(command, cmdfolder, verbose=False, streamoutput=True, returnout
     try:
         if verbose:
             console(cmdfolder, command, color="yellow")
-
-        commandfile = hashlib.md5(str(command).encode()).hexdigest() + ".sh"
+        for prevfile in os.listdir(cmdfolder):
+            if prevfile.startswith("callcommand_"):
+                os.remove(os.path.join(cmdfolder, prevfile))
+        commandfile = "callcommand_"+hashlib.md5(str(command).encode()).hexdigest() + ".sh"
         commandfilepath = join(cmdfolder, commandfile)
         open(commandfilepath, "w").write(command)
 
