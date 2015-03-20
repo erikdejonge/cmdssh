@@ -6,7 +6,6 @@ Active8 (09-03-15)
 author: erik@a8.nl
 license: GNU-GPL2
 """
-
 import os
 import subprocess
 import getpass
@@ -130,11 +129,12 @@ def call_command(command, cmdfolder, verbose=False, streamoutput=True, returnout
             while proc.poll() is None:
                 output = proc.stdout.readline()
                 output = output.decode("utf-8")
+
                 if returnoutput is True:
                     retval += str(output)
 
                 if len(output.strip()) > 0:
-                    console(output, color="green"),
+                    console(output, color="green", prefix=command)
         else:
             so, se = proc.communicate()
             if proc.returncode != 0 or verbose:
@@ -162,16 +162,20 @@ def call_command(command, cmdfolder, verbose=False, streamoutput=True, returnout
         console_exception(e)
 
 
-def run_cmd(cmd, pr=False, streamoutput=True, returnoutput=True):
+def run_cmd(cmd, pr=False, streamoutput=True, returnoutput=True, cwd=None):
     """
-    @type cmd: str, unicode
+    @type cmd: str
     @type pr: bool
     @type streamoutput: bool
     @type returnoutput: bool
+    @type cwd: str, None
     @return: None
     """
     if pr:
         console("run_cmd:", cmd, color="blue")
 
-    rv = call_command(cmd, os.getcwd(), pr, streamoutput, returnoutput)
+    if cwd is None:
+        cwd = os.getcwd()
+
+    rv = call_command(cmd, cwd, pr, streamoutput, returnoutput)
     return str(rv)
