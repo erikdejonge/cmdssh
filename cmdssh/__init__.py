@@ -135,17 +135,25 @@ def call_command(command, cmdfolder, verbose=False, streamoutput=True, returnout
 
                 if len(output.strip()) > 0:
                     console(output, color="green", prefix=command)
-        else:
-            so, se = proc.communicate()
-            if proc.returncode != 0 or verbose:
-                print("command:")
-                print(so)
-                print(se)
 
-            if returnoutput is True:
-                retval = so
-                retval += se
-                retval = retval.decode()
+            # if proc.returncode != 0 or verbose:
+            #     console(proc)
+            #     raise ChildProcessError(command)
+
+        so, se = proc.communicate()
+        if proc.returncode != 0 or verbose:
+            so = so.decode("utf-8").strip()
+            se = se.decode("utf-8").strip()
+            output = str(so + se).strip()
+
+            if len(output) > 0:
+                print(output)
+            raise ChildProcessError(command)
+
+        if returnoutput is True:
+            retval = so
+            retval += se
+            retval = retval.decode()
 
         if os.path.exists(commandfilepath):
             os.remove(commandfilepath)
@@ -154,8 +162,6 @@ def call_command(command, cmdfolder, verbose=False, streamoutput=True, returnout
             return retval.strip()
         else:
             return proc.returncode
-    except OSError as e:
-        console_exception(e)
     except ValueError as e:
         console_exception(e)
     except subprocess.CalledProcessError as e:
