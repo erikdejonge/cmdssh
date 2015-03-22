@@ -15,7 +15,7 @@ from os.path import join
 
 import paramiko
 from paramiko import SSHClient
-from consoleprinter import console_exception, console, console_warning
+from consoleprinter import console_exception, console, console_warning, console_error
 from .scp import SCPClient
 
 
@@ -113,10 +113,12 @@ def call_command(command, cmdfolder, verbose=False, streamoutput=True, returnout
     try:
         if verbose:
             console(cmdfolder, command, color="yellow")
+
         for prevfile in os.listdir(cmdfolder):
             if prevfile.startswith("callcommand_"):
                 os.remove(os.path.join(cmdfolder, prevfile))
-        commandfile = "callcommand_"+hashlib.md5(str(command).encode()).hexdigest() + ".sh"
+
+        commandfile = "callcommand_" + hashlib.md5(str(command).encode()).hexdigest() + ".sh"
         commandfilepath = join(cmdfolder, commandfile)
         open(commandfilepath, "w").write(command)
 
@@ -147,10 +149,8 @@ def call_command(command, cmdfolder, verbose=False, streamoutput=True, returnout
             so = so.decode("utf-8").strip()
             se = se.decode("utf-8").strip()
             output = str(so + se).strip()
+            console_error(command, ChildProcessError(command), errorplaintxt=output)
 
-            if len(output) > 0:
-                print(output)
-            raise ChildProcessError(command)
 
         if returnoutput is True:
             retval = so
