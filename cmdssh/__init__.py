@@ -138,7 +138,7 @@ def call_command(command, cmdfolder, verbose=False, streamoutput=True, returnout
                     retval += str(output)
 
                 if len(output.strip()) > 0:
-                    console(output, color="green", prefix=command)
+                    console(output.strip(), color="green", prefix=command)
 
             # if proc.returncode != 0 or verbose:
             #     console(proc)
@@ -149,7 +149,7 @@ def call_command(command, cmdfolder, verbose=False, streamoutput=True, returnout
             so = so.decode("utf-8").strip()
             se = se.decode("utf-8").strip()
             output = str(so + se).strip()
-            console_error(command, ChildProcessError(command), errorplaintxt=output)
+            console_error(command, SystemExit("Exit on: "+command), errorplaintxt=output, line_num_only=9)
 
 
         if returnoutput is True:
