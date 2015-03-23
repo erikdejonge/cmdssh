@@ -125,45 +125,42 @@ def call_command(command, cmdfolder, verbose=False, streamoutput=True, returnout
         if not os.path.exists(commandfilepath):
             raise ValueError("commandfile could not be made")
 
-        os.chmod(commandfilepath, stat.S_IREAD | stat.S_IWRITE | stat.S_IEXEC)
-        proc = subprocess.Popen(commandfilepath, stderr=subprocess.PIPE, stdout=subprocess.PIPE, cwd=cmdfolder, shell=True)
-        retval = ""
+        try:
+            os.chmod(commandfilepath, stat.S_IREAD | stat.S_IWRITE | stat.S_IEXEC)
+            proc = subprocess.Popen(commandfilepath, stderr=subprocess.PIPE, stdout=subprocess.PIPE, cwd=cmdfolder, shell=True)
+            retval = ""
 
-        if streamoutput is True:
-            while proc.poll() is None:
-                output = proc.stdout.readline()
-                output = output.decode("utf-8")
+            if streamoutput is True:
+                while proc.poll() is None:
+                    output = proc.stdout.readline()
+                    output = output.decode("utf-8")
 
-                if returnoutput is True:
-                    retval += str(output)
+                    if returnoutput is True:
+                        retval += str(output)
 
-                if len(output.strip()) > 0:
-                    console(output.strip(), color="green", prefix=command)
+                    if len(output.strip()) > 0:
+                        console(output.strip(), color="green", prefix=command)
 
-            # if proc.returncode != 0 or verbose:
-            #     console(proc)
-            #     raise ChildProcessError(command)
+            so, se = proc.communicate()
+            if proc.returncode != 0 or verbose:
+                so = so.decode("utf-8").strip()
+                se = se.decode("utf-8").strip()
+                output = str(so + se).strip()
+                console_error(command, SystemExit("Exit on: " + command), errorplaintxt=output, line_num_only=9)
 
-        so, se = proc.communicate()
-        if proc.returncode != 0 or verbose:
-            so = so.decode("utf-8").strip()
-            se = se.decode("utf-8").strip()
-            output = str(so + se).strip()
-            console_error(command, SystemExit("Exit on: "+command), errorplaintxt=output, line_num_only=9)
+            if returnoutput is True:
+                retval = so
+                retval += se
+                retval = retval.decode()
 
+            if returnoutput is True:
+                return retval.strip()
+            else:
+                return proc.returncode
+        finally:
+            if os.path.exists(commandfilepath):
+                os.remove(commandfilepath)
 
-        if returnoutput is True:
-            retval = so
-            retval += se
-            retval = retval.decode()
-
-        if os.path.exists(commandfilepath):
-            os.remove(commandfilepath)
-
-        if returnoutput is True:
-            return retval.strip()
-        else:
-            return proc.returncode
     except ValueError as e:
         console_exception(e)
     except subprocess.CalledProcessError as e:
