@@ -19,11 +19,12 @@ from consoleprinter import console_exception, console, console_warning, console_
 from .scp import SCPClient
 
 
-def remote_cmd(server, cmd, username=None):
+def remote_cmd(server, cmd, username=None, timeout=60):
     """
     @type server: str, unicode
     @type cmd: str, unicode
-    @type username: CryptoUser
+    @type username: str
+    @type timeout: int
     @return: None
     """
     if username is None:
@@ -32,7 +33,7 @@ def remote_cmd(server, cmd, username=None):
     ssh = paramiko.SSHClient()
     ssh.load_system_host_keys()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    ssh.connect(server, username=username)
+    ssh.connect(server, username=username, timeout=timeout)
     si, so, se = ssh.exec_command(cmd)
     so = so.read()
     se = se.read()
