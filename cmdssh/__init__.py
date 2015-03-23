@@ -15,41 +15,58 @@ from os.path import join
 
 import paramiko
 from paramiko import SSHClient
-from consoleprinter import console_exception, console, console_warning, console_error
+from consoleprinter import console_exception, console, remove_escapecodes, console_error
 from .scp import SCPClient
 
 
-def remote_cmd(server, cmd, username=None, timeout=60, keys=None):
+def remote_cmd(server, cmd, username=None, timeout=60):
     """
     @type server: str
     @type cmd: str
     @type username: string, None
     @type timeout: int
-    @type keys: list, None
+
     @return: None
     """
     if username is None:
-
         username = getpass.getuser()
 
     ssh = paramiko.SSHClient()
     ssh.load_system_host_keys()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     pkey = None
+
     if os.path.exists("keys/insecure/vagrant"):
         pkey = paramiko.RSAKey.from_private_key_file("keys/insecure/vagrant")
-    # if os.path.exists("keys/secure/vagrant"):
-    #     pkey = paramiko.RSAKey.from_private_key_file("keys/secure/vagrant")
+    #
+    # if os.path.exists("keys/secure/vagrantsecure"):
+    #      pkey = paramiko.RSAKey.from_private_key_file("keys/secure/vagrantsecure")
     ssh.connect(server, username=username, timeout=timeout, pkey=pkey)
     si, so, se = ssh.exec_command(cmd)
     so = so.read()
     se = se.read()
 
-    if len(se) > 0:
-        console_warning(se)
+    #so = so.encode("utf-8").strip()
 
+
+    if len(se) > 0:
+        se = se.decode("utf-8").strip()
+        console(se, color="red", print_stack=True)
+        retval = 1
+
+    #if so and len(so) > 0:
+    ##    so = so.decode("utf-8").strip()
     so = so.decode("utf-8")
+
     return so
+
+
+def shell(cmd):
+    """
+    @type cmd: str
+    @return: None
+    """
+    return subprocess.call(cmd, shell=True)
 
 
 def remote_cmd_map(servercmd):
@@ -74,7 +91,15 @@ def run_scp(server, username, cmdtype, fp1, fp2):
     run_cmd("ssh -t " + username + "@" + server + " date")
     ssh = SSHClient()
     ssh.load_system_host_keys()
-    ssh.connect(server)
+
+
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    pkey = None
+
+    if os.path.exists("keys/insecure/vagrant"):
+        pkey = paramiko.RSAKey.from_private_key_file("keys/insecure/vagrant")
+
+    ssh.connect(server, username=username, pkey=pkey)
 
     # SCPCLient takes a paramiko transport as its only argument
     scpc = SCPClient(ssh.get_transport())
@@ -109,13 +134,14 @@ def get_scp(server, fp1, fp2, username=None):
     return run_scp(server, username, "get", fp1, fp2)
 
 
-def call_command(command, cmdfolder, verbose=False, streamoutput=True, returnoutput=False):
+def call_command(command, cmdfolder, verbose=False, streamoutput=True, returnoutput=False, prefix=None):
     """
     @type command: str, unicode
     @type cmdfolder: str, unicode
     @type verbose: bool
     @type streamoutput: bool
     @type returnoutput: bool
+    @type prefix: str, None
     @return: None
     """
     try:
@@ -135,19 +161,28 @@ def call_command(command, cmdfolder, verbose=False, streamoutput=True, returnout
 
         try:
             os.chmod(commandfilepath, stat.S_IREAD | stat.S_IWRITE | stat.S_IEXEC)
+
             proc = subprocess.Popen(commandfilepath, stderr=subprocess.PIPE, stdout=subprocess.PIPE, cwd=cmdfolder, shell=True)
             retval = ""
 
             if streamoutput is True:
                 while proc.poll() is None:
                     output = proc.stdout.readline()
-                    output = output.decode("utf-8")
 
-                    if returnoutput is True:
-                        retval += str(output)
+                    if isinstance(output, bytes):
+                        output = output.decode("utf-8")
 
-                    if len(output.strip()) > 0:
-                        console(output.strip(), color="green", prefix=command)
+                    if len(remove_escapecodes(output).strip()) > 0:
+                        if returnoutput is True:
+                            retval += str(output)
+
+                        if prefix is None:
+                            prefix = command
+
+                        if len(prefix) > 50:
+                            prefix = prefix.split(" ")[0]
+
+                        console(output.rstrip(), color="green", prefix=prefix)
 
             so, se = proc.communicate()
             if proc.returncode != 0 or verbose:
@@ -175,13 +210,14 @@ def call_command(command, cmdfolder, verbose=False, streamoutput=True, returnout
         console_exception(e)
 
 
-def run_cmd(cmd, pr=False, streamoutput=True, returnoutput=True, cwd=None):
+def run_cmd(cmd, pr=False, streamoutput=True, returnoutput=True, cwd=None, prefix=None):
     """
     @type cmd: str
     @type pr: bool
     @type streamoutput: bool
     @type returnoutput: bool
     @type cwd: str, None
+    @type prefix: str, None
     @return: None
     """
     if pr:
@@ -190,5 +226,5 @@ def run_cmd(cmd, pr=False, streamoutput=True, returnoutput=True, cwd=None):
     if cwd is None:
         cwd = os.getcwd()
 
-    rv = call_command(cmd, cwd, pr, streamoutput, returnoutput)
+    rv = call_command(cmd, cwd, pr, streamoutput, returnoutput, prefix)
     return str(rv)
