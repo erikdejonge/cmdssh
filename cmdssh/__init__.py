@@ -19,13 +19,12 @@ from consoleprinter import console_exception, console, remove_escapecodes, conso
 from .scp import SCPClient
 
 
-def remote_cmd(server, cmd, username=None, timeout=60):
+def remote_cmd(server, cmd, username=None, timeout=60, keypath=None):
     """
     @type server: str
     @type cmd: str
     @type username: string, None
     @type timeout: int
-
     @return: None
     """
     if username is None:
@@ -36,28 +35,21 @@ def remote_cmd(server, cmd, username=None, timeout=60):
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     pkey = None
 
-    if os.path.exists("keys/insecure/vagrant"):
-        pkey = paramiko.RSAKey.from_private_key_file("keys/insecure/vagrant")
-    #
-    # if os.path.exists("keys/secure/vagrantsecure"):
-    #      pkey = paramiko.RSAKey.from_private_key_file("keys/secure/vagrantsecure")
+    if keypath is not None:
+        if os.path.exists(keypath):
+            pkey = paramiko.RSAKey.from_private_key_file(keypath)
+            ssh._host_keys
     ssh.connect(server, username=username, timeout=timeout, pkey=pkey)
     si, so, se = ssh.exec_command(cmd)
     so = so.read()
     se = se.read()
-
-    #so = so.encode("utf-8").strip()
-
 
     if len(se) > 0:
         se = se.decode("utf-8").strip()
         console(se, color="red", print_stack=True)
         retval = 1
 
-    #if so and len(so) > 0:
-    ##    so = so.decode("utf-8").strip()
     so = so.decode("utf-8")
-
     return so
 
 
@@ -74,8 +66,8 @@ def remote_cmd_map(servercmd):
     @type servercmd: tuple
     @return: str
     """
-    server, cmd = servercmd
-    res = remote_cmd(server, cmd)
+    server, cmd, username = servercmd
+    res = remote_cmd(server, cmd, username)
     return server, res
 
 
@@ -91,13 +83,11 @@ def run_scp(server, username, cmdtype, fp1, fp2):
     run_cmd("ssh -t " + username + "@" + server + " date")
     ssh = SSHClient()
     ssh.load_system_host_keys()
-
-
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     pkey = None
 
-    if os.path.exists("keys/insecure/vagrant"):
-        pkey = paramiko.RSAKey.from_private_key_file("keys/insecure/vagrant")
+    #if os.path.exists("keys/insecure/vagrant"):
+    #    pkey = paramiko.RSAKey.from_private_key_file("keys/insecure/vagrant")
 
     ssh.connect(server, username=username, pkey=pkey)
 
@@ -161,7 +151,6 @@ def call_command(command, cmdfolder, verbose=False, streamoutput=True, returnout
 
         try:
             os.chmod(commandfilepath, stat.S_IREAD | stat.S_IWRITE | stat.S_IEXEC)
-
             proc = subprocess.Popen(commandfilepath, stderr=subprocess.PIPE, stdout=subprocess.PIPE, cwd=cmdfolder, shell=True)
             retval = ""
 
