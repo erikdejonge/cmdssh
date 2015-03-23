@@ -19,21 +19,28 @@ from consoleprinter import console_exception, console, console_warning, console_
 from .scp import SCPClient
 
 
-def remote_cmd(server, cmd, username=None, timeout=60):
+def remote_cmd(server, cmd, username=None, timeout=60, keys=None):
     """
-    @type server: str, unicode
-    @type cmd: str, unicode
-    @type username: str
+    @type server: str
+    @type cmd: str
+    @type username: string, None
     @type timeout: int
+    @type keys: list, None
     @return: None
     """
     if username is None:
+
         username = getpass.getuser()
 
     ssh = paramiko.SSHClient()
     ssh.load_system_host_keys()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    ssh.connect(server, username=username, timeout=timeout)
+    pkey = None
+    if os.path.exists("keys/insecure/vagrant"):
+        pkey = paramiko.RSAKey.from_private_key_file("keys/insecure/vagrant")
+    # if os.path.exists("keys/secure/vagrant"):
+    #     pkey = paramiko.RSAKey.from_private_key_file("keys/secure/vagrant")
+    ssh.connect(server, username=username, timeout=timeout, pkey=pkey)
     si, so, se = ssh.exec_command(cmd)
     so = so.read()
     se = se.read()
