@@ -46,7 +46,8 @@ def remote_cmd(server, cmd, username=None, timeout=60, keypath=None):
 
     if len(se) > 0:
         se = se.decode("utf-8").strip()
-        console(se, color="red", print_stack=True)
+
+        console(se.replace("\n", "\n     | "), color="red", print_stack=True, line_num_only=6)
         retval = 1
 
     so = so.decode("utf-8")
