@@ -7,7 +7,7 @@ license: GNU-GPL2
 
 from setuptools import setup
 setup(name='cmdssh',
-      version='9',
+      version='10',
       description='Execute commands on local machine and on remote machine via ssh, and a wrapper for paramikos scp.',
       url='https://github.com/erikdejonge/cmdssh',
       author='Erik de Jonge',
@@ -15,7 +15,7 @@ setup(name='cmdssh',
       license='GPL',
       packages=['cmdssh'],
       zip_safe=True,
-      #install_requires=['paramiko'],
+      install_requires=['paramiko'],
       classifiers=[
           "Programming Language :: Python",
           "Programming Language :: Python :: 3",
