@@ -32,25 +32,29 @@ def remote_cmd(server, cmd, username=None, timeout=60, keypath=None):
         username = getpass.getuser()
 
     ssh = paramiko.SSHClient()
-    ssh.load_system_host_keys()
-    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    pkey = None
+    try:
+        ssh.load_system_host_keys()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        pkey = None
 
-    if keypath is not None:
-        if os.path.exists(keypath):
-            pkey = paramiko.RSAKey.from_private_key_file(keypath)
+        if keypath is not None:
+            if os.path.exists(keypath):
+                pkey = paramiko.RSAKey.from_private_key_file(keypath)
 
-    ssh.connect(server, username=username, timeout=timeout, pkey=pkey)
-    si, so, se = ssh.exec_command(cmd)
-    so = so.read()
-    se = se.read()
+        ssh.connect(server, username=username, timeout=timeout, pkey=pkey)
+        si, so, se = ssh.exec_command(cmd)
+        so = so.read()
+        se = se.read()
 
-    if len(se) > 0:
-        se = se.decode("utf-8").strip()
-        console(se.replace("\n", "\n     | "), color="red", print_stack=True, line_num_only=6)
+        if len(se) > 0:
+            se = se.decode("utf-8").strip()
+            console(se.replace("\n", "\n     | "), color="red", print_stack=True, line_num_only=6)
 
-    so = so.decode("utf-8")
-    return so
+        so = so.decode("utf-8")
+        return so
+    finally:
+        ssh.close()
+
 
 
 def shell(cmd):
