@@ -25,6 +25,7 @@ def remote_cmd(server, cmd, username=None, timeout=60, keypath=None):
     @type cmd: str
     @type username: string, None
     @type timeout: int
+    @type keypath:str,None
     @return: None
     """
     if username is None:
@@ -38,7 +39,7 @@ def remote_cmd(server, cmd, username=None, timeout=60, keypath=None):
     if keypath is not None:
         if os.path.exists(keypath):
             pkey = paramiko.RSAKey.from_private_key_file(keypath)
-            ssh._host_keys
+
     ssh.connect(server, username=username, timeout=timeout, pkey=pkey)
     si, so, se = ssh.exec_command(cmd)
     so = so.read()
@@ -46,9 +47,7 @@ def remote_cmd(server, cmd, username=None, timeout=60, keypath=None):
 
     if len(se) > 0:
         se = se.decode("utf-8").strip()
-
         console(se.replace("\n", "\n     | "), color="red", print_stack=True, line_num_only=6)
-        retval = 1
 
     so = so.decode("utf-8")
     return so
@@ -87,9 +86,8 @@ def run_scp(server, username, cmdtype, fp1, fp2):
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     pkey = None
 
-    #if os.path.exists("keys/insecure/vagrant"):
+    # if os.path.exists("keys/insecure/vagrant"):
     #    pkey = paramiko.RSAKey.from_private_key_file("keys/insecure/vagrant")
-
     ssh.connect(server, username=username, pkey=pkey)
 
     # SCPCLient takes a paramiko transport as its only argument
@@ -160,7 +158,7 @@ def call_command(command, cmdfolder, verbose=False, streamoutput=True, returnout
                     output = proc.stdout.readline()
 
                     if isinstance(output, bytes):
-                        output = output.decode("utf-8")
+                        output = output.decode()
 
                     if len(remove_escapecodes(output).strip()) > 0:
                         if returnoutput is True:
@@ -176,8 +174,8 @@ def call_command(command, cmdfolder, verbose=False, streamoutput=True, returnout
 
             so, se = proc.communicate()
             if proc.returncode != 0 or verbose:
-                so = so.decode("utf-8").strip()
-                se = se.decode("utf-8").strip()
+                so = so.decode().strip()
+                se = se.decode().strip()
                 output = str(so + se).strip()
                 console_error(command, SystemExit("Exit on: " + command), errorplaintxt=output, line_num_only=9)
 
