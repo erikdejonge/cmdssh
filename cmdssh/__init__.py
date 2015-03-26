@@ -19,6 +19,24 @@ from consoleprinter import console_exception, console, remove_escapecodes, conso
 from .scp import SCPClient
 
 
+def shell(cmd):
+    """
+    @type cmd: str
+    @return: None
+    """
+    return subprocess.call(cmd, shell=True)
+
+
+def remote_cmd_map(servercmd):
+    """
+    @type servercmd: tuple
+    @return: str
+    """
+    server, cmd, username, keypath = servercmd
+    res = remote_cmd(server, cmd, username, 60, keypath)
+    return server, res
+
+
 def remote_cmd(server, cmd, username=None, timeout=60, keypath=None):
     """
     @type server: str
@@ -35,13 +53,12 @@ def remote_cmd(server, cmd, username=None, timeout=60, keypath=None):
     try:
         ssh.load_system_host_keys()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        pkey = None
 
-        if keypath is not None:
-            if os.path.exists(keypath):
-                pkey = paramiko.RSAKey.from_private_key_file(keypath)
-
-        ssh.connect(server, username=username, timeout=timeout, pkey=pkey)
+        # pkey = None
+        # if keypath is not None:
+        #     if os.path.exists(keypath):
+        #         pkey = paramiko.RSAKey.from_private_key_file(keypath)
+        ssh.connect(server, username=username, timeout=timeout, key_filename=keypath)
         si, so, se = ssh.exec_command(cmd)
         so = so.read()
         se = se.read()
@@ -56,27 +73,9 @@ def remote_cmd(server, cmd, username=None, timeout=60, keypath=None):
         ssh.close()
 
 
-
-def shell(cmd):
+def run_scp(server, username, cmdtype, fp1, fp2, keypath):
     """
-    @type cmd: str
-    @return: None
-    """
-    return subprocess.call(cmd, shell=True)
-
-
-def remote_cmd_map(servercmd):
-    """
-    @type servercmd: tuple
-    @return: str
-    """
-    server, cmd, username = servercmd
-    res = remote_cmd(server, cmd, username)
-    return server, res
-
-
-def run_scp(server, username, cmdtype, fp1, fp2):
-    """
+    @type keypath: str, None
     @type server: str, unicode
     @type username: CryptoUser
     @type cmdtype: str, unicode
@@ -84,15 +83,10 @@ def run_scp(server, username, cmdtype, fp1, fp2):
     @type fp2: str, unicode
     @return: None
     """
-    run_cmd("ssh -t " + username + "@" + server + " date")
     ssh = SSHClient()
     ssh.load_system_host_keys()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    pkey = None
-
-    # if os.path.exists("keys/insecure/vagrant"):
-    #    pkey = paramiko.RSAKey.from_private_key_file("keys/insecure/vagrant")
-    ssh.connect(server, username=username, pkey=pkey)
+    ssh.connect(server, username=username, key_filename=keypath)
 
     # SCPCLient takes a paramiko transport as its only argument
     scpc = SCPClient(ssh.get_transport())
@@ -105,26 +99,35 @@ def run_scp(server, username, cmdtype, fp1, fp2):
     return True
 
 
-def put_scp(server, fp1, fp2, username=None):
+def put_scp(server, fp1, fp2, username=None, keypath=None):
     """
     @type server: str, unicode
     @type fp1: str, unicode
     @type fp2: str, unicode
     @type username: CryptoUser, None
+    @type keypath: str, None
     @return: None
     """
-    return run_scp(server, username, "put", fp1, fp2)
+    return run_scp(server, username, "put", fp1, fp2, keypath)
 
 
-def get_scp(server, fp1, fp2, username=None):
+def get_scp(server, fp1, fp2, username=None, keypath=None):
     """
     @type server: str, unicode
     @type fp1: str, unicode
     @type fp2: str, unicode
     @type username: CryptoUser, None
+    @type keypath: str, None
     @return: None
     """
-    return run_scp(server, username, "get", fp1, fp2)
+    return run_scp(server, username, "get", fp1, fp2, keypath)
+
+
+class CallCommandException(SystemExit):
+    """
+    CallCommandException
+    """
+    pass
 
 
 def call_command(command, cmdfolder, verbose=False, streamoutput=True, returnoutput=False, prefix=None):
@@ -181,12 +184,18 @@ def call_command(command, cmdfolder, verbose=False, streamoutput=True, returnout
                 so = so.decode().strip()
                 se = se.decode().strip()
                 output = str(so + se).strip()
-                console_error(command, SystemExit("Exit on: " + command), errorplaintxt=output, line_num_only=9)
+
+                if proc.returncode == 1:
+                    console_error(command, CallCommandException("Exit on: " + command), errorplaintxt=output, line_num_only=9)
+                else:
+                    console("returncode: " + str(proc.returncode), command, color="red")
 
             if returnoutput is True:
                 retval = so
                 retval += se
-                retval = retval.decode()
+
+                if hasattr(retval, "decode"):
+                    retval = retval.decode()
 
             if returnoutput is True:
                 return retval.strip()
