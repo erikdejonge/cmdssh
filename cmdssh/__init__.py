@@ -17,6 +17,106 @@ import paramiko
 from paramiko import SSHClient
 from consoleprinter import console_exception, console, remove_escapecodes, console_error
 from .scp import SCPClient
+from consoleprinter import warning
+
+import socket
+import sys
+from paramiko.py3compat import u
+
+import termios
+import tty
+
+
+def get_terminal_size():
+    """
+    get_terminal_size
+    """
+    env = os.environ
+
+    def ioctl_gwinsz(fd2):
+        """
+        @type fd2: int
+        @return: None
+        """
+        # noinspection PyBroadException
+        try:
+            import fcntl
+            import termios
+            import struct
+            import os
+            cr2 = struct.unpack('hh', fcntl.ioctl(fd2, termios.TIOCGWINSZ, '1234'))
+        except:
+            return
+
+        return cr2
+
+    cr = ioctl_gwinsz(0) or ioctl_gwinsz(1) or ioctl_gwinsz(2)
+
+    if not cr:
+        # noinspection PyBroadException
+        try:
+            fd = os.open(os.ctermid(), os.O_RDONLY)
+            cr = ioctl_gwinsz(fd)
+            os.close(fd)
+        except:
+            pass
+
+    if not cr:
+
+        cr = (env.get('LINES', 25), env.get('COLUMNS', 80))
+
+        # # #  Use get(key[, default]) instead of a try/catch
+        # try:
+        #    cr = (env['LINES'], env['COLUMNS'])
+        # except:
+        #    cr = (25, 80)
+
+    return int(cr[1]), int(cr[0])
+
+
+def interactive_shell(chan):
+    """
+    @type chan: paramiko.Channel
+    @return: None
+    """
+    posix_shell(chan)
+
+
+def posix_shell(chan):
+    """
+    @type chan: paramiko.Channel
+    @return: None
+    """
+    import select
+    oldtty = termios.tcgetattr(sys.stdin)
+    try:
+        tty.setraw(sys.stdin.fileno())
+        tty.setcbreak(sys.stdin.fileno())
+        chan.settimeout(0.0)
+
+        while True:
+            r, w, e = select.select([chan, sys.stdin], [], [])
+
+            if chan in r:
+                try:
+                    x = u(chan.recv(1024))
+
+                    if len(x) == 0:
+                        break
+                    sys.stdout.write(x)
+                    sys.stdout.flush()
+                except socket.timeout:
+                    pass
+
+            if sys.stdin in r:
+                x = sys.stdin.read(1)
+
+                if len(x) == 0:
+                    break
+                chan.send(x)
+
+    finally:
+        termios.tcsetattr(sys.stdin, termios.TCSADRAIN, oldtty)
 
 
 def shell(cmd):
@@ -33,6 +133,8 @@ def remote_cmd_map(servercmd):
     @return: str
     """
     server, cmd, username, keypath = servercmd
+
+    # noinspection PyArgumentEqualDefault
     res = remote_cmd(server, cmd, username, 60, keypath)
     return server, res
 
@@ -71,6 +173,28 @@ def remote_cmd(server, cmd, username=None, timeout=60, keypath=None):
         return so
     finally:
         ssh.close()
+
+
+def invoke_shell(server, username, keypath):
+    """
+    @type server: str
+    @type username: str
+    @type keypath: list, str
+    @return: None
+    """
+    ssh = SSHClient()
+    ssh.load_system_host_keys()
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    ssh.connect(server, username=username, key_filename=keypath)
+    tw, th = get_terminal_size()
+
+    chann = ssh.invoke_shell(term="xterm-256color", width=tw, height=th)
+    interactive_shell(chann)
+    exitstatus = chann.recv_exit_status()
+    if exitstatus != 0:
+        warning("invoke_shell " + username + "@" + server, "return " + str(exitstatus))
+
+    return exitstatus
 
 
 def run_scp(server, username, cmdtype, fp1, fp2, keypath):
@@ -176,7 +300,6 @@ def call_command(command, cmdfolder, verbose=False, streamoutput=True, returnout
 
                         if len(prefix) > 50:
                             prefix = prefix.split(" ")[0]
-
                         console(output.rstrip(), color="green", prefix=prefix)
 
             so, se = proc.communicate()
