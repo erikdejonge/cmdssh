@@ -161,6 +161,8 @@ def remote_cmd(server, cmd, username=None, timeout=60, keypath=None):
         #     if os.path.exists(keypath):
         #         pkey = paramiko.RSAKey.from_private_key_file(keypath)
         ssh.connect(server, username=username, timeout=timeout, key_filename=keypath)
+
+
         si, so, se = ssh.exec_command(cmd)
         so = so.read()
         se = se.read()
