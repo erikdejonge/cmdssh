@@ -11,13 +11,14 @@ import subprocess
 import getpass
 import stat
 import hashlib
+import requests
 from os.path import join
 
 import paramiko
 from paramiko import SSHClient
 from consoleprinter import console_exception, console, remove_escapecodes, console_error
 from .scp import SCPClient
-from consoleprinter import warning
+from consoleprinter import warning, bar
 
 import socket
 import sys
@@ -62,7 +63,6 @@ def get_terminal_size():
             pass
 
     if not cr:
-
         cr = (env.get('LINES', 25), env.get('COLUMNS', 80))
 
         # # #  Use get(key[, default]) instead of a try/catch
@@ -70,7 +70,6 @@ def get_terminal_size():
         #    cr = (env['LINES'], env['COLUMNS'])
         # except:
         #    cr = (25, 80)
-
     return int(cr[1]), int(cr[0])
 
 
@@ -161,8 +160,6 @@ def remote_cmd(server, cmd, username=None, timeout=60, keypath=None):
         #     if os.path.exists(keypath):
         #         pkey = paramiko.RSAKey.from_private_key_file(keypath)
         ssh.connect(server, username=username, timeout=timeout, key_filename=keypath)
-
-
         si, so, se = ssh.exec_command(cmd)
         so = so.read()
         se = se.read()
@@ -177,6 +174,43 @@ def remote_cmd(server, cmd, username=None, timeout=60, keypath=None):
         ssh.close()
 
 
+def download(url, mypath):
+    """
+    @type url: str
+    @type mypath: str
+    @return: None
+    """
+    cnt = 0
+    total_length = None
+    try:
+        r = requests.get(url, stream=True)
+
+        while cnt < 3:
+            r = requests.get(url, stream=True)
+            total_length = r.headers.get('content-length')
+
+            if total_length is not None:
+                total_length = int(total_length)
+                break
+            else:
+                cnt += 1
+
+    except BaseException as be:
+        console(be, color="red")
+
+    if total_length is None:
+        console("Could not download, total_length is None", url, mypath, printstack=True, color="red")
+
+    if total_length > 0:
+        with open(mypath, 'wb') as f:
+            total_length = int(total_length)
+
+            for chunk in bar(r.iter_content(chunk_size=1024), expected_size=(total_length / 1024) + 1):
+                if chunk:
+                    f.write(chunk)
+                    f.flush()
+
+
 def invoke_shell(server, username, keypath):
     """
     @type server: str
@@ -189,7 +223,6 @@ def invoke_shell(server, username, keypath):
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     ssh.connect(server, username=username, key_filename=keypath)
     tw, th = get_terminal_size()
-
     chann = ssh.invoke_shell(term="xterm-256color", width=tw, height=th)
     interactive_shell(chann)
     exitstatus = chann.recv_exit_status()
