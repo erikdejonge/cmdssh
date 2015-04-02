@@ -44,7 +44,7 @@ class CmdsshTestCase(unittest.TestCase):
         test_run_cmd
         """
         localt = time.strftime("%Y-%m-%d %H:%M", time.localtime())
-        date = run_cmd('date "+%Y-%m-%d% %H:%M"', pr=False, streamoutput=False, returnoutput=True)
+        date = cmd_run('date "+%Y-%m-%d% %H:%M"', pr=False, streamoutput=False, returnoutput=True)
         self.assertEqual(date, localt)
 
     def test_scp(self):
