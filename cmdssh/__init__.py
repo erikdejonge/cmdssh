@@ -8,26 +8,28 @@ Active8 (09-03-15)
 author: erik@a8.nl
 license: GNU-GPL2
 """
-import fcntl
-import getpass
-import hashlib
+
 import os
-import paramiko
-import requests
+import sys
+import tty
+import stat
+import time
+import fcntl
 import select
 import socket
-import stat
 import struct
-import subprocess
-import sys
+import getpass
+import hashlib
 import termios
-import time
-import tty
+import paramiko
+import requests
+import subprocess
+
 from scp import SCPClient
 from paramiko import SSHClient
-from consoleprinter import bar, console, console_error, console_exception, info, remove_escapecodes, warning
 from os.path import join
 from paramiko.py3compat import u
+from consoleprinter import bar, info, console, warning, console_error, console_exception, remove_escapecodes
 
 
 class CallCommandException(SystemExit):
@@ -455,3 +457,4 @@ def shell(cmd):
     @return: None
     """
     return subprocess.call(cmd, shell=True)
+
