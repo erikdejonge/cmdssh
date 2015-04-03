@@ -3,29 +3,31 @@
 """
 pip
 -
+
 Active8 (09-03-15)
 author: erik@a8.nl
 license: GNU-GPL2
 """
-
+import fcntl
 import getpass
 import hashlib
 import os
+import paramiko
+import requests
+import select
 import socket
 import stat
+import struct
 import subprocess
 import sys
 import termios
+import time
 import tty
-from os.path import join
-
-import paramiko
-import requests
 from scp import SCPClient
 from paramiko import SSHClient
+from consoleprinter import bar, console, console_error, console_exception, info, remove_escapecodes, warning
+from os.path import join
 from paramiko.py3compat import u
-
-from consoleprinter import bar, console, console_error, console_exception, remove_escapecodes, warning
 
 
 class CallCommandException(SystemExit):
@@ -35,7 +37,7 @@ class CallCommandException(SystemExit):
     pass
 
 
-def call_command(command, cmdfolder, verbose=False, streamoutput=True, returnoutput=False, prefix=None):
+def call_command(command, cmdfolder, verbose=False, streamoutput=True, returnoutput=False, prefix=None, ret_and_code=False):
     """
     @type command: str, unicode
     @type cmdfolder: str, unicode
@@ -43,9 +45,14 @@ def call_command(command, cmdfolder, verbose=False, streamoutput=True, returnout
     @type streamoutput: bool
     @type returnoutput: bool
     @type prefix: str, None
+    @type ret_and_code: bool
     @return: None
     """
     try:
+        if ret_and_code is True:
+            streamoutput = False
+            returnoutput = True
+
         if verbose:
             console(cmdfolder, command, color="yellow")
 
@@ -81,10 +88,12 @@ def call_command(command, cmdfolder, verbose=False, streamoutput=True, returnout
 
                         if len(prefix) > 50:
                             prefix = prefix.split(" ")[0]
+
                         console(output.rstrip(), color="green", prefix=prefix)
 
             so, se = proc.communicate()
-            if proc.returncode != 0 or verbose:
+
+            if ret_and_code is False and (proc.returncode != 0 or verbose):
                 so = so.decode().strip()
                 se = se.decode().strip()
                 output = str(so + se).strip()
@@ -101,8 +110,13 @@ def call_command(command, cmdfolder, verbose=False, streamoutput=True, returnout
                 if hasattr(retval, "decode"):
                     retval = retval.decode()
 
+            if ret_and_code is True:
+                returnoutput = False
+
             if returnoutput is True:
                 return retval.strip()
+            elif ret_and_code is True:
+                return proc.returncode, retval.strip()
             else:
                 return proc.returncode
         finally:
@@ -113,6 +127,77 @@ def call_command(command, cmdfolder, verbose=False, streamoutput=True, returnout
         console_exception(e)
     except subprocess.CalledProcessError as e:
         console_exception(e)
+
+
+def cmd_exec(cmd, cmdtoprint=None, display=True, filter=None):
+    """
+    @type cmd: str
+    @type cmdtoprint: None, str
+    @type display: bool
+    @type filter: function
+    @return: None
+    """
+    code, rv = call_command(cmd, os.getcwd(), ret_and_code=True)
+
+    if display is True:
+        if cmdtoprint is not None:
+            cmd = cmdtoprint
+        if code == 0:
+
+            info(cmd, rv)
+        else:
+
+            s = ""
+            cnt = 1
+            ns = []
+            if filter is not None:
+                rv = filter(rv)
+            for i in rv.strip().split(" "):
+                s += i.strip()
+
+                s += " "
+                if len(s) > 60 * cnt:
+                    cnt += 1
+
+                    s += "\n"
+
+                    ns.append(s)
+
+                    s = ""
+
+            ns.append(s)
+            if len(ns)>1:
+                ns.insert(0, "-- "+str(len(ns))+" parts")
+                ns.append("--")
+            ns2 = []
+            for s in ns:
+
+                ns2.append(s.replace(" \n \n ", "").replace(" \n", "\n").replace("\n ", "\n").strip())
+
+            for s in ns2:
+                warning(cmd, s)
+
+    return code, rv
+
+
+def cmd_run(cmd, pr=False, streamoutput=True, returnoutput=True, cwd=None, prefix=None):
+    """
+    @type cmd: str
+    @type pr: bool
+    @type streamoutput: bool
+    @type returnoutput: bool
+    @type cwd: str, None
+    @type prefix: str, None
+    @return: None
+    """
+    if pr:
+        console("run_cmd:", cmd, color="blue")
+
+    if cwd is None:
+        cwd = os.getcwd()
+
+    rv = call_command(cmd, cwd, pr, streamoutput, returnoutput, prefix)
+    return str(rv)
 
 
 def download(url, mypath):
@@ -127,7 +212,7 @@ def download(url, mypath):
     try:
         r = requests.get(url, stream=True)
 
-        while cnt < 3:
+        while cnt < 10:
             r = requests.get(url, stream=True)
             total_length = r.headers.get('content-length')
 
@@ -136,6 +221,10 @@ def download(url, mypath):
                 break
             else:
                 cnt += 1
+
+            if cnt > 1:
+                console("download", url, "attempt", cnt)
+                time.sleep(0.5)
 
     except BaseException as be:
         console(be, color="red")
@@ -166,10 +255,6 @@ def get_terminal_size():
         """
         # noinspection PyBroadException
         try:
-            import fcntl
-            import termios
-            import struct
-            import os
             cr2 = struct.unpack('hh', fcntl.ioctl(fd2, termios.TIOCGWINSZ, '1234'))
         except:
             return
@@ -232,11 +317,11 @@ def posix_shell(chan):
     @type chan: paramiko.Channel
     @return: None
     """
-    import select
     oldtty = termios.tcgetattr(sys.stdin)
     try:
         tty.setraw(sys.stdin.fileno())
         tty.setcbreak(sys.stdin.fileno())
+
         chan.settimeout(0.0)
 
         while True:
@@ -248,6 +333,7 @@ def posix_shell(chan):
 
                     if len(x) == 0:
                         break
+
                     sys.stdout.write(x)
                     sys.stdout.flush()
                 except socket.timeout:
@@ -258,6 +344,7 @@ def posix_shell(chan):
 
                 if len(x) == 0:
                     break
+
                 chan.send(x)
 
     finally:
@@ -310,26 +397,6 @@ def remote_cmd_map(servercmd):
     # noinspection PyArgumentEqualDefault
     res = remote_cmd(server, cmd, username, 60, keypath)
     return server, res
-
-
-def cmd_run(cmd, pr=False, streamoutput=True, returnoutput=True, cwd=None, prefix=None):
-    """
-    @type cmd: str
-    @type pr: bool
-    @type streamoutput: bool
-    @type returnoutput: bool
-    @type cwd: str, None
-    @type prefix: str, None
-    @return: None
-    """
-    if pr:
-        console("run_cmd:", cmd, color="blue")
-
-    if cwd is None:
-        cwd = os.getcwd()
-
-    rv = call_command(cmd, cwd, pr, streamoutput, returnoutput, prefix)
-    return str(rv)
 
 
 def scp_get(server, fp1, fp2, username=None, keypath=None):
@@ -388,4 +455,3 @@ def shell(cmd):
     @return: None
     """
     return subprocess.call(cmd, shell=True)
-
