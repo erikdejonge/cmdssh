@@ -144,35 +144,13 @@ def cmd_exec(cmd, cmdtoprint=None, display=True, filter=None):
             cmd = cmdtoprint
 
         if code == 0:
-            info(cmd, "output")
+            info("cmd", cmd)
             print(colorize_for_print(rv))
         else:
-            s = ""
+            if filter is not None:
+                rv = filter(rv)
 
-            # cnt = 1
-            # ns = []
-            # if filter is not None:
-            #     rv = filter(rv)
-            # for i in rv.strip().split(" "):
-            #     s += i.strip()
-            #     s += " "
-            #     if len(s) > 60 * cnt:
-            #         cnt += 1
-            #         s += "\n"
-            #         ns.append(s)
-            #         s = ""
-
-            # ns.append(s)
-            # if len(ns) > 1:
-            #     ns.insert(0, "--")
-            #     ns.append("--")
-
-            # ns2 = []
-            # for s in ns:
-            #     ns2.append(s.replace(" \n \n ", "").replace(" \n", "\n").replace("\n ", "\n").strip())
-            # for s in ns2:
-            #     print(s)
-
+            warning("cmd", cmd)
             print(rv)
 
     return code, rv
