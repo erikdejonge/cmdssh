@@ -8,7 +8,6 @@ Active8 (09-03-15)
 author: erik@a8.nl
 license: GNU-GPL2
 """
-
 import os
 import sys
 import tty
@@ -29,7 +28,7 @@ from scp import SCPClient
 from paramiko import SSHClient
 from os.path import join
 from paramiko.py3compat import u
-from consoleprinter import bar, info, console, warning, console_error, console_exception, remove_escapecodes
+from consoleprinter import bar, info, console, warning, console_error, console_exception, colorize_for_print, remove_escapecodes
 
 
 class CallCommandException(SystemExit):
@@ -94,7 +93,6 @@ def call_command(command, cmdfolder, verbose=False, streamoutput=True, returnout
                         console(output.rstrip(), color="green", prefix=prefix)
 
             so, se = proc.communicate()
-
             if ret_and_code is False and (proc.returncode != 0 or verbose):
                 so = so.decode().strip()
                 se = se.decode().strip()
@@ -144,40 +142,38 @@ def cmd_exec(cmd, cmdtoprint=None, display=True, filter=None):
     if display is True:
         if cmdtoprint is not None:
             cmd = cmdtoprint
+
         if code == 0:
-
-            info(cmd, rv)
+            info(cmd, "output")
+            print(colorize_for_print(rv))
         else:
-
             s = ""
-            cnt = 1
-            ns = []
-            if filter is not None:
-                rv = filter(rv)
-            for i in rv.strip().split(" "):
-                s += i.strip()
 
-                s += " "
-                if len(s) > 60 * cnt:
-                    cnt += 1
+            # cnt = 1
+            # ns = []
+            # if filter is not None:
+            #     rv = filter(rv)
+            # for i in rv.strip().split(" "):
+            #     s += i.strip()
+            #     s += " "
+            #     if len(s) > 60 * cnt:
+            #         cnt += 1
+            #         s += "\n"
+            #         ns.append(s)
+            #         s = ""
 
-                    s += "\n"
+            # ns.append(s)
+            # if len(ns) > 1:
+            #     ns.insert(0, "--")
+            #     ns.append("--")
 
-                    ns.append(s)
+            # ns2 = []
+            # for s in ns:
+            #     ns2.append(s.replace(" \n \n ", "").replace(" \n", "\n").replace("\n ", "\n").strip())
+            # for s in ns2:
+            #     print(s)
 
-                    s = ""
-
-            ns.append(s)
-            if len(ns)>1:
-                ns.insert(0, "-- "+str(len(ns))+" parts")
-                ns.append("--")
-            ns2 = []
-            for s in ns:
-
-                ns2.append(s.replace(" \n \n ", "").replace(" \n", "\n").replace("\n ", "\n").strip())
-
-            for s in ns2:
-                warning(cmd, s)
+            print(rv)
 
     return code, rv
 
@@ -457,4 +453,3 @@ def shell(cmd):
     @return: None
     """
     return subprocess.call(cmd, shell=True)
-
