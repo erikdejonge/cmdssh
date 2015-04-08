@@ -199,7 +199,8 @@ def download(url, mypath):
                 cnt += 1
 
             if cnt > 1:
-                console("download", url, "attempt", cnt)
+                if cnt > 8:
+                    console("download", url, "attempt", cnt)
                 time.sleep(0.5)
 
     except BaseException as be:
