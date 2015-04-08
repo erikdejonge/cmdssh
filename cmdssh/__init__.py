@@ -150,7 +150,7 @@ def cmd_exec(cmd, cmdtoprint=None, display=True, filter=None):
             if filter is not None:
                 rv = filter(rv)
 
-            warning("cmd", cmd)
+            warning(str(code)+":"+cmd, rv)
             print(rv)
 
     return code, rv
