@@ -150,7 +150,7 @@ def cmd_exec(cmd, cmdtoprint=None, display=True, filter=None):
             if filter is not None:
                 rv = filter(rv)
 
-            warning(str(code)+":"+cmd, rv)
+            warning("code: " + str(code) + ":" + cmd, rv)
             print(rv)
 
     return code, rv
@@ -186,10 +186,8 @@ def download(url, mypath):
     total_length = None
     r = None
     try:
-        r = requests.get(url, stream=True)
-
         while cnt < 10:
-            r = requests.get(url, stream=True)
+            r = requests.get(url, stream=True, timeout=60)
             total_length = r.headers.get('content-length')
 
             if total_length is not None:
@@ -201,6 +199,7 @@ def download(url, mypath):
             if cnt > 1:
                 if cnt > 8:
                     console("download", url, "attempt", cnt)
+
                 time.sleep(0.5)
 
     except BaseException as be:
