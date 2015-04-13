@@ -149,7 +149,7 @@ def cmd_exec(cmd, cmdtoprint=None, display=True, myfilter=None):
             cmd = cmdtoprint
 
         if code == 0:
-            info("cmd", cmd)
+            print(cmdtoprint)
 
             rvs = rv.split("\n")
 
