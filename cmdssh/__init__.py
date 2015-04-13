@@ -88,9 +88,12 @@ def call_command(command, cmdfolder, verbose=False, streamoutput=True, returnout
                             prefix = command
 
                         if len(prefix) > 50:
-                            prefix = prefix.split(" ")[0]
+                            prefix = prefix.split()[0]
 
                         console(output.rstrip(), color="green", prefix=prefix)
+
+                        if returnoutput is True:
+                            retval += output
 
             so, se = proc.communicate()
             if ret_and_code is False and (proc.returncode != 0 or verbose):
@@ -103,7 +106,7 @@ def call_command(command, cmdfolder, verbose=False, streamoutput=True, returnout
                 else:
                     console("returncode: " + str(proc.returncode), command, color="red")
 
-            if returnoutput is True:
+            if returnoutput is True and streamoutput is False:
                 retval = so
                 retval += se
 
@@ -146,6 +149,7 @@ def cmd_exec(cmd, cmdtoprint=None, display=True, filter=None):
         if code == 0:
             info("cmd", cmd)
             rvs = rv.split("\n")
+
             for rv in rvs:
                 print(colorize_for_print(rv))
         else:
@@ -345,11 +349,6 @@ def remote_cmd(server, cmd, username=None, timeout=60, keypath=None):
     try:
         ssh.load_system_host_keys()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-
-        # pkey = None
-        # if keypath is not None:
-        #     if os.path.exists(keypath):
-        #         pkey = paramiko.RSAKey.from_private_key_file(keypath)
         ssh.connect(server, username=username, timeout=timeout, key_filename=keypath)
         si, so, se = ssh.exec_command(cmd)
         so = so.read()
