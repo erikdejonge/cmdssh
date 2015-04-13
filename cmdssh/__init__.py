@@ -8,11 +8,13 @@ Active8 (09-03-15)
 author: erik@a8.nl
 license: GNU-GPL2
 """
+
 import os
 import sys
 import tty
 import stat
 import time
+import yaml
 import fcntl
 import select
 import socket
@@ -28,7 +30,7 @@ from scp import SCPClient
 from paramiko import SSHClient
 from os.path import join
 from paramiko.py3compat import u
-from consoleprinter import bar, info, console, warning, console_error, console_exception, colorize_for_print, remove_escapecodes
+from consoleprinter import bar, info, console, warning, console_error, get_print_yaml, console_exception, colorize_for_print, remove_escapecodes
 
 
 class CallCommandException(SystemExit):
@@ -148,10 +150,16 @@ def cmd_exec(cmd, cmdtoprint=None, display=True, filter=None):
 
         if code == 0:
             info("cmd", cmd)
-            rvs = rv.split("\n")
 
-            for rv in rvs:
-                print(colorize_for_print(rv))
+            try:
+                yaml.load(rv)
+                print(get_print_yaml(rv))
+            except:
+
+                rvs = rv.split("\n")
+
+                for rv in rvs:
+                    print(colorize_for_print(rv))
         else:
             if filter is not None:
                 rv = filter(rv)
@@ -432,3 +440,4 @@ def shell(cmd):
     @return: None
     """
     return subprocess.call(cmd, shell=True)
+
