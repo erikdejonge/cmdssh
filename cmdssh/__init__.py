@@ -145,7 +145,9 @@ def cmd_exec(cmd, cmdtoprint=None, display=True, filter=None):
 
         if code == 0:
             info("cmd", cmd)
-            print(colorize_for_print(rv))
+            rvs = rv.split("\n")
+            for rv in rvs:
+                print(colorize_for_print(rv))
         else:
             if filter is not None:
                 rv = filter(rv)
