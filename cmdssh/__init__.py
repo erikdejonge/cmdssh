@@ -14,7 +14,6 @@ import sys
 import tty
 import stat
 import time
-import yaml
 import fcntl
 import select
 import socket
@@ -22,15 +21,16 @@ import struct
 import getpass
 import hashlib
 import termios
+import subprocess
+from os.path import join
+
 import paramiko
 import requests
-import subprocess
-
 from scp import SCPClient
 from paramiko import SSHClient
-from os.path import join
 from paramiko.py3compat import u
-from consoleprinter import bar, info, console, warning, console_error, get_print_yaml, console_exception, colorize_for_print, remove_escapecodes
+
+from consoleprinter import bar, info, console, warning, console_error, console_exception, colorize_for_print, remove_escapecodes
 
 
 class CallCommandException(SystemExit):
@@ -134,12 +134,12 @@ def call_command(command, cmdfolder, verbose=False, streamoutput=True, returnout
         console_exception(e)
 
 
-def cmd_exec(cmd, cmdtoprint=None, display=True, filter=None):
+def cmd_exec(cmd, cmdtoprint=None, display=True, myfilter=None):
     """
     @type cmd: str
     @type cmdtoprint: None, str
     @type display: bool
-    @type filter: function
+    @type myfilter: function
     @return: None
     """
     code, rv = call_command(cmd, os.getcwd(), ret_and_code=True)
@@ -151,18 +151,13 @@ def cmd_exec(cmd, cmdtoprint=None, display=True, filter=None):
         if code == 0:
             info("cmd", cmd)
 
-            try:
-                yaml.load(rv)
-                print(get_print_yaml(rv))
-            except:
+            rvs = rv.split("\n")
 
-                rvs = rv.split("\n")
-
-                for rv in rvs:
-                    print(colorize_for_print(rv))
+            for rv in rvs:
+                print(colorize_for_print(rv))
         else:
-            if filter is not None:
-                rv = filter(rv)
+            if myfilter is not None:
+                rv = myfilter(rv)
 
             warning("code: " + str(code) + ":" + cmd, rv)
             print(rv)
