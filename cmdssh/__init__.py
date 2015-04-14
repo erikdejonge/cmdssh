@@ -8,7 +8,6 @@ Active8 (09-03-15)
 author: erik@a8.nl
 license: GNU-GPL2
 """
-
 import os
 import sys
 import tty
@@ -22,14 +21,15 @@ import getpass
 import hashlib
 import termios
 import subprocess
+
 from os.path import join
 
 import paramiko
 import requests
+
 from scp import SCPClient
 from paramiko import SSHClient
 from paramiko.py3compat import u
-
 from consoleprinter import bar, info, console, warning, console_error, console_exception, colorize_for_print, remove_escapecodes
 
 
@@ -149,7 +149,8 @@ def cmd_exec(cmd, cmdtoprint=None, display=True, myfilter=None):
             cmd = cmdtoprint
 
         if code == 0:
-            print(cmdtoprint)
+            if cmdtoprint is not None and not len(cmdtoprint) == 0:
+                print(cmdtoprint)
 
             rvs = rv.split("\n")
 
@@ -353,6 +354,8 @@ def remote_cmd(server, cmd, username=None, timeout=60, keypath=None):
         ssh.load_system_host_keys()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         ssh.connect(server, username=username, timeout=timeout, key_filename=keypath)
+
+        # info("remote_cmd", cmd)
         si, so, se = ssh.exec_command(cmd)
         so = so.read()
         se = se.read()
@@ -435,4 +438,3 @@ def shell(cmd):
     @return: None
     """
     return subprocess.call(cmd, shell=True)
-
