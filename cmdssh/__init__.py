@@ -4,10 +4,11 @@
 pip
 -
 
-Active8 (09-03-15)
+active8 (09-03-15)
 author: erik@a8.nl
-license: GNU-GPL2
+license: gnu-gpl2
 """
+
 import os
 import sys
 import tty
@@ -20,17 +21,13 @@ import struct
 import getpass
 import hashlib
 import termios
-import subprocess
-
-from os.path import join
-
 import paramiko
 import requests
-
+import subprocess
 from scp import SCPClient
 from paramiko import SSHClient
 from paramiko.py3compat import u
-from consoleprinter import bar, info, console, warning, console_error, console_exception, colorize_for_print, remove_escapecodes
+from consoleprinter import bar, console, warning, console_error, console_exception, colorize_for_print, remove_escapecodes
 
 
 class CallCommandException(SystemExit):
@@ -64,7 +61,7 @@ def call_command(command, cmdfolder, verbose=False, streamoutput=True, returnout
                 os.remove(os.path.join(cmdfolder, prevfile))
 
         commandfile = "callcommand_" + hashlib.md5(str(command).encode()).hexdigest() + ".sh"
-        commandfilepath = join(cmdfolder, commandfile)
+        commandfilepath = os.path.join(cmdfolder, commandfile)
         open(commandfilepath, "w").write(command)
 
         if not os.path.exists(commandfilepath):
@@ -108,7 +105,7 @@ def call_command(command, cmdfolder, verbose=False, streamoutput=True, returnout
                 else:
                     console("returncode: " + str(proc.returncode), command, color="red")
 
-            if returnoutput is True and streamoutput is False:
+            if ret_and_code is True or returnoutput is True and streamoutput is False:
                 retval = so
                 retval += se
 
@@ -160,8 +157,9 @@ def cmd_exec(cmd, cmdtoprint=None, display=True, myfilter=None):
             if myfilter is not None:
                 rv = myfilter(rv)
 
-            warning("code: " + str(code) + ":" + cmd, rv)
-            print(rv)
+            warning("code", str(code))
+            warning("cmd", cmd)
+            warning("rv", rv)
 
     return code, rv
 
@@ -438,3 +436,4 @@ def shell(cmd):
     @return: None
     """
     return subprocess.call(cmd, shell=True)
+
