@@ -28,7 +28,7 @@ import subprocess
 from scp import SCPClient
 from paramiko import SSHClient
 from paramiko.py3compat import u
-from consoleprinter import bar, console, warning, console_error, console_exception, colorize_for_print, remove_escapecodes
+from consoleprinter import bar, info, console, warning, console_error, console_exception, colorize_for_print, remove_escapecodes
 
 
 class CallCommandException(SystemExit):
@@ -194,8 +194,10 @@ def download(url, mypath):
     cnt = 0
     total_length = None
     r = None
+
     try:
         while cnt < 10:
+            info("download", url)
             r = requests.get(url, stream=True, timeout=60)
             total_length = r.headers.get('content-length')
 
