@@ -15,7 +15,7 @@ setup(name='cmdssh',
       license='GPL',
       packages=['cmdssh'],
       zip_safe=True,
-      install_requires=['requests', 'paramiko', 'consoleprinter', 'arguments'],
+      install_requires=['requests', 'paramiko', 'consoleprinter', 'arguments', 'github', 'pytz'],
       classifiers=[
           "Programming Language :: Python",
           "Programming Language :: Python :: 3",
