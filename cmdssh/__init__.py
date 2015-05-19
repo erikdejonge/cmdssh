@@ -38,7 +38,7 @@ class CallCommandException(SystemExit):
     pass
 
 
-def call_command(command, cmdfolder, verbose=False, streamoutput=True, returnoutput=False, prefix=None, ret_and_code=False):
+def call_command(command, cmdfolder=os.getcwd(), verbose=False, streamoutput=True, returnoutput=False, prefix=None, ret_and_code=False):
     """
     @type command: str, unicode
     @type cmdfolder: str, unicode
@@ -119,7 +119,7 @@ def call_command(command, cmdfolder, verbose=False, streamoutput=True, returnout
             if returnoutput is True:
                 return retval.strip()
             elif ret_and_code is True:
-                return proc.returncode, retval.strip()
+                return proc.returncode, retval.rstrip()
             else:
                 return proc.returncode
         finally:
