@@ -124,6 +124,7 @@ def call_command(command, cmdfolder=os.getcwd(), verbose=False, streamoutput=Tru
                 return proc.returncode
         finally:
             if os.path.exists(commandfilepath):
+                #if proc.returncode == 0:
                 os.remove(commandfilepath)
 
     except ValueError as e:
