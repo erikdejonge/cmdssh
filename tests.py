@@ -51,7 +51,7 @@ class CmdsshTestCase(unittest.TestCase):
         """
         test_scp
         """
-        run_scp("localhost", "rabshakeh", "put", "./README.md", "./Desktop")
+        scp_run("localhost", "rabshakeh", "put", "./README.md", "./Desktop", None)
         out = remote_cmd("localhost", "ls ~/Desktop")
         x = "README.md" in out
         self.assertTrue(x)
