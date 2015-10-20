@@ -2,7 +2,7 @@
 Execute commands on local machine and on remote machine via ssh, and a wrapper for paramikos scp.
 
 
-#local command execution
+
 
 ## shell command
 Wrapper around subprocess.call with shell=True
@@ -12,7 +12,7 @@ shell(cmd)
 ```
 
 
-## run command
+## Background Unix command running 
 Runs a blocking unix command and returns the result
 
 ``` python
@@ -22,33 +22,12 @@ cmd_run(cmd, pr=False, streamoutput=True, returnoutput=True, cwd=None, prefix=No
 # example
 cmd_run('date "+%Y-%m-%d% %H:%M"', pr=False, streamoutput=False, returnoutput=True)
 
+# more params
+call_command(command, cmdfolder=os.getcwd(), verbose=False, streamoutput=True,\
+             returnoutput=False, prefix=None, ret_and_code=False)
 ```
 
-###Extended version:
-
-``` python
-call_command
-```
-
-###Variant
-Common usecase scenario, run a command and get the result, possibly print to the console using an optional filter.
-
-``` python
-cmd_exec(cmd, cmdtoprint=None, display=True, myfilter=None)
-```
-
-- `cmdtoprint`: unix command
-- `display`: print to console
-- `myfilter`: function used to print 
-
-    ####example filter: 
-```python
-def onlyerrors(data):
-    if "ERROR" in data:
-        return data
-```
-
-##Parameters:
+###Parameters:
 
 - `command`: unix command
 - `cmdfolder`=os.getcwd() -> working folder command
@@ -59,7 +38,27 @@ def onlyerrors(data):
 - `ret_and_code`=False -> return exit code also (code, val)
 
 
-# SSH: run command on remote machine
+
+
+## Variant background unix command
+Common usecase scenario, run a command and get the result, possibly print to the console using an optional filter.
+
+``` python
+# example filter: 
+def onlyerrors(data):
+    if "ERROR" in data:
+        return data
+
+cmd_exec(cmd, cmdtoprint=None, display=True, myfilter=onlyerrors)
+```
+
+- `cmdtoprint`: unix command
+- `display`: print to console
+- `myfilter`: function used to print 
+
+
+
+## SSH: run command on remote machine
 
 Uses ssh and key authentication to logon to a remote ssh server and execute a command there.
 
@@ -70,7 +69,7 @@ def remote_cmd(server, cmd, username=None, timeout=60, keypath=None):
 remote_cmd("localhost", "rm -Rf ~/Desktop/foobar")
 ```
 
-##Parameters:
+###Parameters:
 
 - `server`: ip or domain name of server
 - `cmd`: unix command to execute
@@ -78,21 +77,21 @@ remote_cmd("localhost", "rm -Rf ~/Desktop/foobar")
 - `timeout`: try time to connect to server
 - `keypath`: path to the public key of username
 
-## tuplebased interface
+### tuplebased interface:
 ``` python
 remote_cmd_map(servercmd)
 ```
 
 - `servercmd`: tuple with (  server, cmd, username, keypath )
 
-# SSH: Secure Copy Protocol
+## SSH: Secure Copy Protocol 
 
 ``` python
 scp_get(server, fp1, fp2, username=None, keypath=None)
 scp_put(server, fp1, fp2, username=None, keypath=None)
 ```
 
-##Parameters:
+###Parameters:
 
 - `server`: ip or domain name of server
 - `fp1`: source filepath
@@ -100,7 +99,7 @@ scp_put(server, fp1, fp2, username=None, keypath=None)
 - `username`: username used to login
 - `keypath`: path to the public key of username
 
-# SSH: Shell
+## SSH: Shell
 
 Invoke a shell on a machine
 
@@ -109,22 +108,29 @@ invoke_shell(server, username, keypath)
 ```
 
 
-##Parameters:
+###Parameters:
 
 - `server`: ip or domain name of server
 - `username`: username used to login
 - `keypath`: path to the public key of username
 
 
-# Download file
+## Download file
 Wrapper around the requests library. Downloads a file with a progress bar.
 
 ```python
 download(url, mypath):
 ```
-## parameters
+### parameters:
 
 - `url`: url to download
 - `mypath`: filepath where to create the downloaded file
+
+### example output:
+
+``` bash
+download: http://download.thinkbroadband.com/5MB.zip
+00:00:02|███████████████████████         | 3.7Mi/5.0Mi
+```
 
 
