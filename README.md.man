@@ -1,0 +1,164 @@
+.TH "" "" "" "" ""
+.SH cmdssh
+.PP
+Execute commands on local machine and on remote machine via ssh, and a
+wrapper for paramikos scp.
+.SS shell command
+.PP
+Wrapper around subprocess.call with shell=True
+.IP
+.nf
+\f[C]
+shell(cmd)
+\f[]
+.fi
+.SS Background Unix command running
+.PP
+Runs a blocking unix command and returns the result
+.IP
+.nf
+\f[C]
+
+cmd_run(cmd,\ pr=False,\ streamoutput=True,\ returnoutput=True,\ cwd=None,\ prefix=None)
+
+#\ example
+cmd_run(\[aq]date\ "+%Y\-%m\-%d%\ %H:%M"\[aq],\ pr=False,\ streamoutput=False,\ returnoutput=True)
+
+#\ more\ params
+call_command(command,\ cmdfolder=os.getcwd(),\ verbose=False,\ streamoutput=True,\\
+\ \ \ \ \ \ \ \ \ \ \ \ \ returnoutput=False,\ prefix=None,\ ret_and_code=False)
+\f[]
+.fi
+.SS Parameters:
+.IP \[bu] 2
+\f[C]command\f[]: unix command
+.IP \[bu] 2
+\f[C]cmdfolder\f[]=os.getcwd() \-> working folder command
+.IP \[bu] 2
+\f[C]verbose\f[]=False \-> prints the command
+.IP \[bu] 2
+\f[C]streamoutput\f[]=True \-> prints output to stdout (keeps buffering)
+.IP \[bu] 2
+\f[C]returnoutput\f[]=False \-> return the buffered output
+.IP \[bu] 2
+\f[C]prefix\f[]=None \-> string to place before streaming output
+.IP \[bu] 2
+\f[C]ret_and_code\f[]=False \-> return exit code also (code, val)
+.SS Variant background unix command
+.PP
+Common usecase scenario, run a command and get the result, possibly
+print to the console using an optional filter.
+.IP
+.nf
+\f[C]
+#\ example\ filter:\ 
+def\ onlyerrors(data):
+\ \ \ \ if\ "ERROR"\ in\ data:
+\ \ \ \ \ \ \ \ return\ data
+
+cmd_exec(cmd,\ cmdtoprint=None,\ display=True,\ myfilter=onlyerrors)
+\f[]
+.fi
+.IP \[bu] 2
+\f[C]cmdtoprint\f[]: unix command
+.IP \[bu] 2
+\f[C]display\f[]: print to console
+.IP \[bu] 2
+\f[C]myfilter\f[]: function used to print
+.SS SSH: run command on remote machine
+.PP
+Uses ssh and key authentication to logon to a remote ssh server and
+execute a command there.
+.IP
+.nf
+\f[C]
+def\ remote_cmd(server,\ cmd,\ username=None,\ timeout=60,\ keypath=None):
+
+#example
+remote_cmd("localhost",\ "rm\ \-Rf\ ~/Desktop/foobar")
+\f[]
+.fi
+.SS Parameters:
+.IP \[bu] 2
+\f[C]server\f[]: ip or domain name of server
+.IP \[bu] 2
+\f[C]cmd\f[]: unix command to execute
+.IP \[bu] 2
+\f[C]username\f[]: username used to login
+.IP \[bu] 2
+\f[C]timeout\f[]: try time to connect to server
+.IP \[bu] 2
+\f[C]keypath\f[]: path to the public key of username
+.SS tuplebased interface:
+.IP
+.nf
+\f[C]
+remote_cmd_map(servercmd)
+\f[]
+.fi
+.IP \[bu] 2
+\f[C]servercmd\f[]: tuple with ( server, cmd, username, keypath )
+.PD 0
+.P
+.PD
+I
+.RS 2
+.SS SSH: Secure Copy Protocol
+.RE
+.IP
+.nf
+\f[C]
+scp_get(server,\ fp1,\ fp2,\ username=None,\ keypath=None)
+scp_put(server,\ fp1,\ fp2,\ username=None,\ keypath=None)
+\f[]
+.fi
+.SS Parameters:
+.IP \[bu] 2
+\f[C]server\f[]: ip or domain name of server
+.IP \[bu] 2
+\f[C]fp1\f[]: source filepath
+.IP \[bu] 2
+\f[C]fp2\f[]: target filepath
+.IP \[bu] 2
+\f[C]username\f[]: username used to login
+.IP \[bu] 2
+\f[C]keypath\f[]: path to the public key of username
+.SS SSH: Shell
+.PP
+Invoke a shell on a machine
+.IP
+.nf
+\f[C]
+invoke_shell(server,\ username,\ keypath)
+\f[]
+.fi
+.SS Parameters:
+.IP \[bu] 2
+\f[C]server\f[]: ip or domain name of server
+.IP \[bu] 2
+\f[C]username\f[]: username used to login
+.IP \[bu] 2
+\f[C]keypath\f[]: path to the public key of username
+.SS Download file
+.PP
+Wrapper around the requests library.
+Downloads a file with a progress bar.
+.IP
+.nf
+\f[C]
+download(url,\ mypath):
+\f[]
+.fi
+.SS parameters:
+.IP \[bu] 2
+\f[C]url\f[]: url to download
+.IP \[bu] 2
+\f[C]mypath\f[]: filepath where to create the downloaded file
+.SS example output:
+.IP
+.nf
+\f[C]
+download:\ http://download.thinkbroadband.com/5MB.zip
+00:00:02|███████████████████████\ \ \ \ \ \ \ \ \ |\ 3.7Mi/5.0Mi
+\f[]
+.fi
