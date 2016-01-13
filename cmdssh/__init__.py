@@ -102,7 +102,11 @@ def call_command(command, cmdfolder=os.getcwd(), verbose=False, streamoutput=Tru
                 output = str(so + se).strip()
 
                 if proc.returncode == 1:
-                    console_error(command, CallCommandException("Exit on: " + command), errorplaintxt=output, line_num_only=9)
+                    if verbose:
+                        console_error(command, CallCommandException("Exit on: " + command), errorplaintxt=output, line_num_only=9)
+                    else:
+                        raise CallCommandException("Exit on: " + command+" - "+output)
+
                 else:
                     console("returncode: " + str(proc.returncode), command, color="red")
 
