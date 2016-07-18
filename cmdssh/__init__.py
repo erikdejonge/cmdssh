@@ -37,8 +37,7 @@ class CallCommandException(SystemExit):
     """
     pass
 
-
-def call_command(command, cmdfolder=os.getcwd(), verbose=False, streamoutput=True, returnoutput=False, prefix=None, ret_and_code=False):
+def call_command(command, cmdfolder=os.path.expanduser("~"), verbose=False, streamoutput=True, returnoutput=False, prefix=None, ret_and_code=False):
     """
     @type command: str, unicode
     @type cmdfolder: str, unicode
